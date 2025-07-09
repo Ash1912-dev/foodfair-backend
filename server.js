@@ -7,24 +7,26 @@ require('dotenv').config();
 const Order = require('./models/Order');
 const app = express();
 
-// Middleware
-app.use(cors());    
+// ✅ CORS Configuration
+const corsOptions = {
+  origin: 'https://foodfair-ordering.netlify.app', // your frontend Netlify URL
+  credentials: true
+};
+
+app.use(cors(corsOptions)); // ✅ Use custom CORS settings
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ MongoDB connected'))
-.catch(err => console.log('❌ MongoDB connection error:', err));
+// ✅ MongoDB connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.log('❌ MongoDB connection error:', err));
 
+// ✅ Root route to confirm backend works
 app.get('/', (req, res) => {
   res.send('🎉 Funfair backend is running!');
 });
 
-
-// Get current ordering status
+// ✅ Get current ordering status
 app.get('/api/settings', async (req, res) => {
   let setting = await Setting.findOne();
   if (!setting) {
@@ -33,7 +35,7 @@ app.get('/api/settings', async (req, res) => {
   res.json({ allowOrdering: setting.allowOrdering });
 });
 
-// Update ordering status (from admin)
+// ✅ Update ordering status
 app.post('/api/settings', async (req, res) => {
   const { allowOrdering } = req.body;
   let setting = await Setting.findOne();
@@ -46,13 +48,9 @@ app.post('/api/settings', async (req, res) => {
   res.json({ allowOrdering });
 });
 
-// Already at top:
-require('dotenv').config();
-
-// New route below your existing API routes
+// ✅ Admin login (simple env-based check)
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
-
   const adminUser = process.env.ADMIN_USERNAME;
   const adminPass = process.env.ADMIN_PASSWORD;
 
@@ -63,12 +61,10 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-
-// POST: Create a new order
+// ✅ Create a new order
 app.post('/api/orders', async (req, res) => {
   try {
     const { orderId, name, email, phone, items, total, timestamp } = req.body;
-
     const newOrder = new Order({
       orderId,
       name,
@@ -81,7 +77,6 @@ app.post('/api/orders', async (req, res) => {
       paid: false,
       closed: false
     });
-
     await newOrder.save();
     res.status(201).json({ message: 'Order saved' });
   } catch (err) {
@@ -90,7 +85,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// GET: Fetch all orders
+// ✅ Fetch all orders
 app.get('/api/orders', async (req, res) => {
   try {
     const orders = await Order.find().sort({ timestamp: -1 });
@@ -101,7 +96,7 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-// PATCH: Update order status (served, paid, closed)
+// ✅ Update order status
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     await Order.findByIdAndUpdate(req.params.id, req.body);
@@ -112,7 +107,7 @@ app.patch('/api/orders/:id', async (req, res) => {
   }
 });
 
-// DELETE: Clear all orders
+// ✅ Clear all orders
 app.delete('/api/orders', async (req, res) => {
   try {
     await Order.deleteMany({});
@@ -123,8 +118,6 @@ app.delete('/api/orders', async (req, res) => {
   }
 });
 
-
-
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
