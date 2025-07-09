@@ -7,13 +7,8 @@ require('dotenv').config();
 const Order = require('./models/Order');
 const app = express();
 
-// ✅ CORS Configuration
-const corsOptions = {
-  origin: 'https://foodfair-ordering.netlify.app', // your frontend Netlify URL
-  credentials: true
-};
-
-app.use(cors(corsOptions)); // ✅ Use custom CORS settings
+// Middleware
+app.use(cors());    
 app.use(express.json());
 
 // ✅ MongoDB connection
@@ -48,7 +43,10 @@ app.post('/api/settings', async (req, res) => {
   res.json({ allowOrdering });
 });
 
-// ✅ Admin login (simple env-based check)
+// Already at top:
+require('dotenv').config();
+
+// New route below your existing API routes
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   const adminUser = process.env.ADMIN_USERNAME;
@@ -61,15 +59,15 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-// ✅ Create a new order
+
+// POST: Create a new order
 app.post('/api/orders', async (req, res) => {
   try {
     const { orderId, name, email, phone, items, total, timestamp } = req.body;
+
     const newOrder = new Order({
       orderId,
       name,
-      email,
-      phone,
       items,
       total,
       timestamp,
@@ -96,7 +94,7 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-// ✅ Update order status
+// PATCH: Update order status (served, paid, closed)
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     await Order.findByIdAndUpdate(req.params.id, req.body);
@@ -118,6 +116,8 @@ app.delete('/api/orders', async (req, res) => {
   }
 });
 
-// ✅ Start server
+
+
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
