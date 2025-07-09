@@ -19,6 +19,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('✅ MongoDB connected'))
 .catch(err => console.log('❌ MongoDB connection error:', err));
 
+app.get('/', (req, res) => {
+  res.send('🎉 Funfair backend is running!');
+});
+
+
 // Get current ordering status
 app.get('/api/settings', async (req, res) => {
   let setting = await Setting.findOne();
