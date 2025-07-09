@@ -1,0 +1,125 @@
+const Setting = require('./models/Setting');
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
+
+const Order = require('./models/Order');
+const app = express();
+
+// Middleware
+app.use(cors());    
+app.use(express.json());
+
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.log('❌ MongoDB connection error:', err));
+
+// Get current ordering status
+app.get('/api/settings', async (req, res) => {
+  let setting = await Setting.findOne();
+  if (!setting) {
+    setting = await Setting.create({ allowOrdering: true });
+  }
+  res.json({ allowOrdering: setting.allowOrdering });
+});
+
+// Update ordering status (from admin)
+app.post('/api/settings', async (req, res) => {
+  const { allowOrdering } = req.body;
+  let setting = await Setting.findOne();
+  if (!setting) {
+    setting = new Setting({ allowOrdering });
+  } else {
+    setting.allowOrdering = allowOrdering;
+  }
+  await setting.save();
+  res.json({ allowOrdering });
+});
+
+// Already at top:
+require('dotenv').config();
+
+// New route below your existing API routes
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+
+  const adminUser = process.env.ADMIN_USERNAME;
+  const adminPass = process.env.ADMIN_PASSWORD;
+
+  if (username === adminUser && password === adminPass) {
+    res.json({ message: 'Login successful' });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+
+// POST: Create a new order
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { orderId, name, email, phone, items, total, timestamp } = req.body;
+
+    const newOrder = new Order({
+      orderId,
+      name,
+      email,
+      phone,
+      items,
+      total,
+      timestamp,
+      served: false,
+      paid: false,
+      closed: false
+    });
+
+    await newOrder.save();
+    res.status(201).json({ message: 'Order saved' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save order' });
+  }
+});
+
+// GET: Fetch all orders
+app.get('/api/orders', async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ timestamp: -1 });
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+// PATCH: Update order status (served, paid, closed)
+app.patch('/api/orders/:id', async (req, res) => {
+  try {
+    await Order.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ message: 'Order updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// DELETE: Clear all orders
+app.delete('/api/orders', async (req, res) => {
+  try {
+    await Order.deleteMany({});
+    res.json({ message: 'All orders cleared' });
+  } catch (err) {
+    console.error('❌ Error clearing orders:', err);
+    res.status(500).json({ error: 'Failed to clear orders' });
+  }
+});
+
+
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
