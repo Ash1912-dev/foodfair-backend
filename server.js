@@ -1,3 +1,4 @@
+const MenuItem = require('./models/MenuItem');
 const Setting = require('./models/Setting');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -115,6 +116,32 @@ app.delete('/api/orders', async (req, res) => {
     res.status(500).json({ error: 'Failed to clear orders' });
   }
 });
+
+// Get all menu items
+app.get('/api/menu', async (req, res) => {
+  const items = await MenuItem.find();
+  res.json(items);
+});
+
+// Add new item
+app.post('/api/menu', async (req, res) => {
+  const item = new MenuItem(req.body);
+  await item.save();
+  res.status(201).json({ message: 'Item added' });
+});
+
+// Update item
+app.put('/api/menu/:id', async (req, res) => {
+  await MenuItem.findByIdAndUpdate(req.params.id, req.body);
+  res.json({ message: 'Item updated' });
+});
+
+// Delete item
+app.delete('/api/menu/:id', async (req, res) => {
+  await MenuItem.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Item deleted' });
+});
+
 
 
 
