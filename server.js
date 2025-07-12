@@ -143,36 +143,39 @@ app.delete('/api/menu/:id', async (req, res) => {
 });
 
 // Daily report endpoint
-app.get('/api/reports/daily', async (req, res) => {
+const { Parser } = require('json2csv');
+
+app.get('/api/reports/daily/export', async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const orders = await Order.find({ timestamp: { $gte: today } });
 
-    let totalRevenue = 0;
-    let itemsSold = {};
+    const formattedOrders = orders.map(order => ({
+      orderId: order.orderId,
+      name: order.name,
+      total: order.total,
+      items: order.items.map(i => `${i.name} x${i.quantity}`).join(', '),
+      served: order.served ? '✔️ Served' : '❌ Not Served',
+      paid: order.paid ? '💰 Paid' : '❌ Not Paid',
+      closed: order.closed ? '✅ Closed' : '❌ Open',
+      timestamp: new Date(order.timestamp).toLocaleString('en-IN')
+    }));
 
-    orders.forEach(order => {
-      totalRevenue += order.total;
-      order.items.forEach(item => {
-        if (!itemsSold[item.name]) itemsSold[item.name] = 0;
-        itemsSold[item.name] += item.quantity || 1;
-      });
-    });
+    const fields = ['orderId', 'name', 'total', 'items', 'served', 'paid', 'closed', 'timestamp'];
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(formattedOrders);
 
-    res.json({
-      date: today.toISOString().split('T')[0],
-      totalOrders: orders.length,
-      totalRevenue,
-      itemsSold,
-      orders
-    });
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`daily-report-${today.toISOString().split('T')[0]}.csv`);
+    return res.send(csv);
   } catch (err) {
-    console.error("Report generation error", err);
-    res.status(500).json({ error: "Failed to generate report" });
+    console.error('❌ CSV export error:', err);
+    res.status(500).json({ error: 'Failed to export report' });
   }
 });
+
 
 
 
