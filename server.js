@@ -152,29 +152,43 @@ app.get('/api/reports/daily/export', async (req, res) => {
 
     const orders = await Order.find({ timestamp: { $gte: today } });
 
-    const formattedOrders = orders.map(order => ({
-      orderId: order.orderId,
-      name: order.name,
-      total: order.total,
-      items: order.items.map(i => `${i.name} x${i.quantity}`).join(', '),
-      served: order.served ? '✔️ Served' : '❌ Not Served',
-      paid: order.paid ? '💰 Paid' : '❌ Not Paid',
-      closed: order.closed ? '✅ Closed' : '❌ Open',
-      timestamp: new Date(order.timestamp).toLocaleString('en-IN')
-    }));
+    // Prepare flattened array
+    const flatData = [];
 
-    const fields = ['orderId', 'name', 'total', 'items', 'served', 'paid', 'closed', 'timestamp'];
-    const json2csvParser = new Parser({ fields });
-    const csv = json2csvParser.parse(formattedOrders);
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        flatData.push({
+          "Order ID": order.orderId,
+          "Customer Name": order.name,
+          "Item Name": item.name,
+          "Quantity": item.quantity,
+          "Price": item.price,
+          "Total": order.total,
+          "Timestamp": new Date(order.timestamp).toLocaleString('en-IN'),
+          "Served": order.served,
+          "Paid": order.paid,
+          "Closed": order.closed
+        });
+      });
+    });
+
+    const fields = [
+      "Order ID", "Customer Name", "Item Name", "Quantity", "Price",
+      "Total", "Timestamp", "Served", "Paid", "Closed"
+    ];
+
+    const json2csv = new Parser({ fields });
+    const csv = json2csv.parse(flatData);
 
     res.header('Content-Type', 'text/csv');
     res.attachment(`daily-report-${today.toISOString().split('T')[0]}.csv`);
     return res.send(csv);
   } catch (err) {
-    console.error('❌ CSV export error:', err);
-    res.status(500).json({ error: 'Failed to export report' });
+    console.error("Export error:", err);
+    res.status(500).json({ error: "Failed to export report" });
   }
 });
+
 
 
 
