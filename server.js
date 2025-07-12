@@ -152,29 +152,38 @@ app.get('/api/reports/daily/export', async (req, res) => {
 
     const orders = await Order.find({ timestamp: { $gte: today } });
 
-    // Prepare flattened array
     const flatData = [];
 
     orders.forEach(order => {
       order.items.forEach(item => {
         flatData.push({
-          "Order ID": order.orderId,
-          "Customer Name": order.name,
-          "Item Name": item.name,
-          "Quantity": item.quantity,
-          "Price": item.price,
-          "Total": order.total,
-          "Timestamp": new Date(order.timestamp).toLocaleString('en-IN'),
-          "Served": order.served,
-          "Paid": order.paid,
-          "Closed": order.closed
+          orderId: order.orderId || '',
+          customerName: order.name || '',
+          itemName: item.name || '',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          itemTotal: (item.quantity && item.price) ? item.quantity * item.price : 0,
+          total: order.total || 0,
+          timestamp: new Date(order.timestamp).toLocaleString('en-IN'),
+          served: order.served ? 'Yes' : 'No',
+          paid: order.paid ? 'Yes' : 'No',
+          closed: order.closed ? 'Yes' : 'No'
         });
       });
     });
 
     const fields = [
-      "Order ID", "Customer Name", "Item Name", "Quantity", "Price",
-      "Total", "Timestamp", "Served", "Paid", "Closed"
+      { label: 'Order ID', value: 'orderId' },
+      { label: 'Customer Name', value: 'customerName' },
+      { label: 'Item Name', value: 'itemName' },
+      { label: 'Quantity', value: 'quantity' },
+      { label: 'Price', value: 'price' },
+      { label: 'Item Total', value: 'itemTotal' },
+      { label: 'Total Bill', value: 'total' },
+      { label: 'Timestamp', value: 'timestamp' },
+      { label: 'Served', value: 'served' },
+      { label: 'Paid', value: 'paid' },
+      { label: 'Closed', value: 'closed' }
     ];
 
     const json2csv = new Parser({ fields });
@@ -182,14 +191,12 @@ app.get('/api/reports/daily/export', async (req, res) => {
 
     res.header('Content-Type', 'text/csv');
     res.attachment(`daily-report-${today.toISOString().split('T')[0]}.csv`);
-    return res.send(csv);
+    res.send(csv);
   } catch (err) {
-    console.error("Export error:", err);
-    res.status(500).json({ error: "Failed to export report" });
+    console.error("❌ CSV Export Error:", err);
+    res.status(500).json({ error: "Failed to export daily report" });
   }
 });
-
-
 
 
 
