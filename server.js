@@ -142,6 +142,38 @@ app.delete('/api/menu/:id', async (req, res) => {
   res.json({ message: 'Item deleted' });
 });
 
+// Daily report endpoint
+app.get('/api/reports/daily', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const orders = await Order.find({ timestamp: { $gte: today } });
+
+    let totalRevenue = 0;
+    let itemsSold = {};
+
+    orders.forEach(order => {
+      totalRevenue += order.total;
+      order.items.forEach(item => {
+        if (!itemsSold[item.name]) itemsSold[item.name] = 0;
+        itemsSold[item.name] += item.quantity || 1;
+      });
+    });
+
+    res.json({
+      date: today.toISOString().split('T')[0],
+      totalOrders: orders.length,
+      totalRevenue,
+      itemsSold,
+      orders
+    });
+  } catch (err) {
+    console.error("Report generation error", err);
+    res.status(500).json({ error: "Failed to generate report" });
+  }
+});
+
 
 
 
