@@ -8,6 +8,13 @@ require('dotenv').config();
 const Order = require('./models/Order');
 const app = express();
 
+// Wrap existing HTTP server with Socket.IO
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, { cors: { origin: '*' } });
+io.on('connection', (socket) => {
+  socket.on('join_order', (orderId) => socket.join(`order_${orderId}`));
+});
+
 // Middleware
 app.use(cors());    
 app.use(express.json());
@@ -77,6 +84,7 @@ app.post('/api/orders', async (req, res) => {
       closed: false
     });
     await newOrder.save();
+    io.emit('new_order', { orderId, status: 'Pending', items, customerName: name });
     res.status(201).json({ message: 'Order saved' });
   } catch (err) {
     console.error(err);
@@ -99,6 +107,9 @@ app.get('/api/orders', async (req, res) => {
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     await Order.findByIdAndUpdate(req.params.id, req.body);
+    const updatedOrder = await Order.findById(req.params.id);
+    const newStatus = Object.keys(req.body)[0]; 
+    io.to(`order_${updatedOrder.orderId}`).emit('order_status_updated', { orderId: updatedOrder.orderId, newStatus });
     res.json({ message: 'Order updated' });
   } catch (err) {
     console.error(err);
@@ -203,4 +214,4 @@ app.get('/api/reports/daily/export', async (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
