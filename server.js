@@ -48,6 +48,7 @@ app.post('/api/settings', async (req, res) => {
     setting.allowOrdering = allowOrdering;
   }
   await setting.save();
+  io.emit('settings_updated', { allowOrdering });
   res.json({ allowOrdering });
 });
 
@@ -138,18 +139,21 @@ app.get('/api/menu', async (req, res) => {
 app.post('/api/menu', async (req, res) => {
   const item = new MenuItem(req.body);
   await item.save();
+  io.emit('menu_updated');
   res.status(201).json({ message: 'Item added' });
 });
 
 // Update item
 app.put('/api/menu/:id', async (req, res) => {
   await MenuItem.findByIdAndUpdate(req.params.id, req.body);
+  io.emit('menu_updated');
   res.json({ message: 'Item updated' });
 });
 
 // Delete item
 app.delete('/api/menu/:id', async (req, res) => {
   await MenuItem.findByIdAndDelete(req.params.id);
+  io.emit('menu_updated');
   res.json({ message: 'Item deleted' });
 });
 
